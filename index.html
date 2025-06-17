@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Hub - Your Study Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #111827;
+            /* gray-900 */
+            --text-dark: #f9fafb;
+            --theme-primary: #4f46e5;
+            /* indigo-600 */
+            --theme-primary-hover: #4338ca;
+            /* indigo-700 */
+            --theme-secondary: #6366f1;
+            /* indigo-500 */
+            --theme-light: #818cf8;
+            /* indigo-400 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .timer-display {
+            font-size: 6.5rem;
+            line-height: 1;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .task-item:hover .delete-task {
+            opacity: 1;
+        }
+
+        .delete-task {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: #1f2937;
+            /* gray-800 */
+            color: var(--text-dark);
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        /* Generic Toggle Switch Style */
+        .toggle-switch-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4b5563;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.toggle-slider {
+            background-color: var(--theme-primary);
+        }
+
+        input:checked+.toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Theme colors */
+        .theme-indigo {
+            --theme-primary: #4f46e5;
+            --theme-primary-hover: #4338ca;
+            --theme-secondary: #6366f1;
+            --theme-light: #818cf8;
+        }
+
+        .theme-teal {
+            --theme-primary: #0f766e;
+            --theme-primary-hover: #0d9488;
+            --theme-secondary: #14b8a6;
+            --theme-light: #5eead4;
+        }
+
+        .theme-rose {
+            --theme-primary: #e11d48;
+            --theme-primary-hover: #be185d;
+            --theme-secondary: #f43f5e;
+            --theme-light: #fb7185;
+        }
+
+        .theme-orange {
+            --theme-primary: #ea580c;
+            --theme-primary-hover: #c2410c;
+            --theme-secondary: #f97316;
+            --theme-light: #fb923c;
+        }
+
+        .theme-emerald {
+            --theme-primary: #059669;
+            --theme-primary-hover: #047857;
+            --theme-secondary: #10b981;
+            --theme-light: #6ee7b7;
+        }
+
+        .theme-purple {
+            --theme-primary: #7c3aed;
+            --theme-primary-hover: #6d28d9;
+            --theme-secondary: #8b5cf6;
+            --theme-light: #a78bfa;
+        }
+
+        /* Apply theme colors to elements */
+        .bg-indigo-600,
+        .bg-indigo-500,
+        .bg-indigo-400 {
+            background-color: var(--theme-primary) !important;
+        }
+
+        .hover\\:bg-indigo-700:hover,
+        .hover\\:bg-indigo-600:hover {
+            background-color: var(--theme-primary-hover) !important;
+        }
+
+        .text-indigo-400,
+        .text-indigo-500 {
+            color: var(--theme-light) !important;
+        }
+
+        .border-indigo-500,
+        .focus\\:border-indigo-500:focus {
+            border-color: var(--theme-secondary) !important;
+        }
+
+        .focus\\:ring-indigo-500:focus {
+            --tw-ring-color: var(--theme-secondary) !important;
+        }
+
+        .progress-ring__circle {
+            stroke: var(--theme-secondary) !important;
+        }
+
+        .theme-option.selected {
+            border-color: var(--theme-secondary) !important;
+            background-color: rgba(55, 65, 81, 0.5) !important;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 flex flex-col items-center justify-center min-h-screen">
+
+        <div class="absolute top-4 left-4">
+            <div class="bg-gray-800/80 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-700">
+                <div class="text-xs text-gray-400 mb-1">IST</div>
+                <div id="ist-clock" class="text-lg font-mono text-indigo-400 font-semibold">00:00:00</div>
+                <div id="ist-date" class="text-xs text-gray-500">Loading...</div>
+            </div>
+        </div>
+
+        <div class="absolute top-4 right-4 flex items-center space-x-4">
+            <button id="progress-report-btn" class="text-gray-400 hover:text-indigo-300 transition" title="Progress Report">
+                <i class="fas fa-chart-pie fa-2x"></i>
+            </button>
+            <button id="fullscreen-btn" class="text-gray-400 hover:text-indigo-300 transition">
+                <i class="fas fa-expand fa-2x"></i>
+            </button>
+            <button id="settings-btn" class="text-gray-400 hover:text-indigo-300 transition">
+                <i class="fas fa-cog fa-2x"></i>
+            </button>
+        </div>
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-indigo-400">Focus Hub</h1>
+            <p class="text-lg text-gray-400 mt-2">Your dedicated space for deep work and study.</p>
+            <p class="text-sm text-gray-500 mt-4 break-all">User ID: <span id="userIdDisplay">Loading...</span></p>
+        </header>
+
+        <main class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
+
+            <section id="timer-section" class="text-center">
+                <div class="flex justify-center items-center gap-x-6 mb-4">
+                    <div class="timer-display font-bold text-indigo-400">
+                        <span id="time-part1">25</span><span>:</span><span id="time-part2">00</span>
+                    </div>
+                    <div class="relative w-24 h-24">
+                        <svg class="absolute inset-0" width="100%" height="100%" viewBox="0 0 120 120">
+                            <circle class="text-gray-700" stroke-width="8" stroke="currentColor" fill="transparent"
+                                r="56" cx="60" cy="60" />
+                            <circle id="progress-ring" class="progress-ring__circle text-indigo-500" stroke-width="8"
+                                stroke-linecap="round" stroke="currentColor" fill="transparent" r="56" cx="60"
+                                cy="60" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="pomodoro-controls" class="flex items-center justify-center space-x-2 mb-4">
+                    <button id="pomodoro-btn"
+                        class="px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold shadow hover:bg-indigo-600 transition">Pomodoro</button>
+                    <button id="shortBreak-btn"
+                        class="px-4 py-2 bg-gray-700 rounded-lg font-semibold hover:bg-gray-600 transition">Short
+                        Break</button>
+                    <button id="longBreak-btn"
+                        class="px-4 py-2 bg-gray-700 rounded-lg font-semibold hover:bg-gray-600 transition">Long
+                        Break</button>
+                </div>
+
+                <div class="flex items-center justify-between mb-4 w-full max-w-[250px] mx-auto">
+                    <div class="w-12 h-12"></div> <button id="start-stop-btn"
+                        class="w-28 px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-indigo-700 transition transform hover:scale-105">START</button>
+                    <button id="reset-btn"
+                        class="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-indigo-300 transition"><i
+                            class="fas fa-redo fa-lg"></i></button>
+                </div>
+
+                <div id="session-tracker" class="text-gray-400">Sessions: 0 / 4</div>
+                <div id="active-task-display" class="mt-4 p-3 bg-gray-700 rounded-lg hidden">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400 mb-1">Working on:</p>
+                        <p id="active-task-name" class="font-semibold text-indigo-400"></p>
+                        <p class="text-xs text-gray-500 mt-1">Time on this task: <span id="task-session-time">0m</span></p>
+                    </div>
+                </div>
+            </section>
+
+            <hr class="my-8 border-gray-700">
+
+            <section id="todo-section">
+                <!-- Tasks Section -->
+                <div class="bg-gradient-to-br from-gray-800/60 to-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-700/30 shadow-2xl overflow-hidden">
+                    <!-- Header Section -->
+                    <div class="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 p-6 border-b border-gray-700/50">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-indigo-500/20 p-3 rounded-xl">
+                                    <i class="fas fa-tasks text-xl text-indigo-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-2xl font-bold text-white">Task Manager</h3>
+                                    <p class="text-indigo-200/70 text-sm">Organize your work efficiently</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div id="task-progress" class="text-sm font-medium text-indigo-300">0/0 Completed</div>
+                                <div class="text-xs text-gray-400 mt-1">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Task Form -->
+                    <div class="p-6 bg-gray-800/30">
+                        <div class="bg-gray-700/40 rounded-xl p-4 border border-gray-600/30">
+                            <div class="flex flex-col lg:flex-row gap-3">
+                                <div class="flex-grow relative">
+                                    <input type="text" id="new-task-input" placeholder="Add task" 
+                                           class="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 backdrop-blur-sm">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <i class="fas fa-pencil-alt text-gray-500 text-sm"></i>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <select id="task-priority" class="px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all duration-200 min-w-[140px] hover:bg-gray-700/50 cursor-pointer">
+                                        <option value="low">🟢 Low</option>
+                                        <option value="medium">🟡 Medium</option>
+                                        <option value="high">🟠 High</option>
+                                        <option value="urgent">🔴 Urgent</option>
+                                    </select>
+                                    <button id="add-task-btn" class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-lg hover:shadow-indigo-500/25 transform hover:scale-105">
+                                        <i class="fas fa-plus mr-2"></i>Add Task
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Task Display -->
+                    <div id="active-task-display" class="hidden mx-6 mb-4">
+                        <div class="bg-gradient-to-r from-indigo-900/50 to-purple-900/30 border border-indigo-500/30 rounded-xl p-4 backdrop-blur-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="relative">
+                                        <div class="w-3 h-3 bg-indigo-400 rounded-full animate-pulse"></div>
+                                        <div class="absolute inset-0 w-3 h-3 bg-indigo-400 rounded-full animate-ping opacity-75"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-indigo-300 font-medium">Currently Working On</div>
+                                        <div id="active-task-name" class="font-semibold text-white text-lg"></div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-indigo-300 mb-1">Session Time</div>
+                                    <div id="task-session-time" class="text-indigo-400 font-mono text-xl font-bold">0s</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task List Container -->
+                    <div class="px-6 pb-6">
+                        <div class="bg-gray-800/20 rounded-xl border border-gray-700/30 overflow-hidden">
+                            <!-- Task List Header -->
+                            <div class="px-4 py-3 bg-gray-700/30 border-b border-gray-600/30">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-list text-gray-400"></i>
+                                        <span class="text-sm font-medium text-gray-300">Your Tasks</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Task List -->
+                            <div class="max-h-80 overflow-y-auto custom-scrollbar">
+                                <ul id="task-list" class="divide-y divide-gray-700/30">
+                                    <li class="text-gray-400 text-center py-8 bg-gray-800/10">
+                                        <div class="flex flex-col items-center space-y-2">
+                                            <i class="fas fa-clipboard-list text-3xl text-gray-500"></i>
+                                            <p class="text-lg font-medium">No tasks yet</p>
+                                            <p class="text-sm">Add your first task above to get started!</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="w-full max-w-2xl mt-8 text-center">
+            <div id="sounds-section" class="bg-gray-800 rounded-2xl shadow-lg p-4 mb-8">
+                <div class="flex justify-center items-center space-x-4">
+                    <h3 class="font-semibold text-gray-300">Ambient Sound</h3>
+                    <div class="toggle-switch-wrapper">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="ambient-sound-toggle" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div id="quote-section" class="min-h-[70px] flex flex-col justify-center items-center">
+                <p id="quote-text" class="text-lg font-bold text-gray-400">Loading today's inspiration...</p>
+                <p id="quote-author" class="text-sm font-semibold text-gray-300 mt-2"></p>
+            </div>
+        </footer>
+    </div>
+
+    <div id="main-modal" class="modal-backdrop hidden">
+        <div class="modal-content relative"><button id="modal-close-btn"
+                class="absolute top-4 right-4 text-gray-500 hover:text-gray-200"><i
+                    class="fas fa-times fa-lg"></i></button>
+            <h3 id="modal-title" class="text-xl font-bold mb-4">Notification</h3>
+            <p id="modal-message" class="mb-4"></p>
+            <div id="modal-buttons" class="flex justify-end space-x-3"></div>
+        </div>
+    </div>
+
+    <div id="progress-modal" class="modal-backdrop hidden">
+        <div class="modal-content relative max-w-6xl w-full max-h-[95vh] overflow-hidden">
+            <button id="progress-close-btn" class="absolute top-6 right-6 text-gray-300 hover:text-white z-20 bg-gray-600/50 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-gray-500/50">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-lg">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white/20 p-3 rounded-lg">
+                        <i class="fas fa-chart-pie text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-white">Progress Dashboard</h3>
+                        <p class="text-indigo-100">Your productivity insights and achievements</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="bg-gray-800 border-b border-gray-700">
+                <div class="flex space-x-0">
+                    <button class="progress-tab px-6 py-4 bg-indigo-600 text-white font-medium border-b-2 border-indigo-400" data-tab="overview">
+                        <i class="fas fa-chart-bar mr-2"></i>Overview
+                    </button>
+                    <button class="progress-tab px-6 py-4 text-gray-300 hover:text-white hover:bg-gray-700 transition font-medium" data-tab="tasks">
+                        <i class="fas fa-tasks mr-2"></i>Tasks
+                    </button>
+                    <button class="progress-tab px-6 py-4 text-gray-300 hover:text-white hover:bg-gray-700 transition font-medium" data-tab="activity">
+                        <i class="fas fa-history mr-2"></i>Activity
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content Container -->
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+
+                <!-- Overview Tab -->
+                <div id="overview-content" class="progress-content">
+                    <!-- Time Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-gradient-to-br from-blue-500/20 to-blue-600/20 p-6 rounded-xl border border-blue-500/30">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="bg-blue-500/20 p-2 rounded-lg">
+                                    <i class="fas fa-calendar-day text-blue-400"></i>
+                                </div>
+                                <div class="text-xs text-blue-300 font-medium">TODAY</div>
+                            </div>
+                            <div class="text-3xl font-bold text-blue-400 mb-1" id="today-time">0h 0m</div>
+                            <div class="text-sm text-blue-300/70">Focus time today</div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-green-500/20 to-green-600/20 p-6 rounded-xl border border-green-500/30">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="bg-green-500/20 p-2 rounded-lg">
+                                    <i class="fas fa-calendar-week text-green-400"></i>
+                                </div>
+                                <div class="text-xs text-green-300 font-medium">WEEK</div>
+                            </div>
+                            <div class="text-3xl font-bold text-green-400 mb-1" id="week-time">0h 0m</div>
+                            <div class="text-sm text-green-300/70">This week's total</div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 p-6 rounded-xl border border-yellow-500/30">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="bg-yellow-500/20 p-2 rounded-lg">
+                                    <i class="fas fa-calendar-alt text-yellow-400"></i>
+                                </div>
+                                <div class="text-xs text-yellow-300 font-medium">MONTH</div>
+                            </div>
+                            <div class="text-3xl font-bold text-yellow-400 mb-1" id="month-time">0h 0m</div>
+                            <div class="text-sm text-yellow-300/70">Monthly progress</div>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-500/20 to-purple-600/20 p-6 rounded-xl border border-purple-500/30">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="bg-purple-500/20 p-2 rounded-lg">
+                                    <i class="fas fa-infinity text-purple-400"></i>
+                                </div>
+                                <div class="text-xs text-purple-300 font-medium">TOTAL</div>
+                            </div>
+                            <div class="text-3xl font-bold text-purple-400 mb-1" id="total-time">0h 0m</div>
+                            <div class="text-sm text-purple-300/70">All time focus</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-700/30 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-indigo-400 mb-1" id="avg-session">0m</div>
+                            <div class="text-sm text-gray-400">Avg Session</div>
+                        </div>
+                        <div class="bg-gray-700/30 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-green-400 mb-1" id="total-sessions">0</div>
+                            <div class="text-sm text-gray-400">Total Sessions</div>
+                        </div>
+                        <div class="bg-gray-700/30 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-yellow-400 mb-1" id="productivity-score">0%</div>
+                            <div class="text-sm text-gray-400">Productivity</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div id="tasks-content" class="progress-content hidden">
+                    <div class="bg-gradient-to-r from-gray-700/50 to-gray-600/50 p-6 rounded-xl border border-gray-600/50">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="bg-indigo-500/20 p-2 rounded-lg">
+                                <i class="fas fa-tasks text-indigo-400"></i>
+                            </div>
+                            <h4 class="text-xl font-semibold text-indigo-400">Task Time Breakdown</h4>
+                        </div>
+                        <div id="task-breakdown" class="space-y-3">
+                            <!-- Task breakdown will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity Tab -->
+                <div id="activity-content" class="progress-content hidden">
+                    <div class="bg-gradient-to-r from-gray-700/50 to-gray-600/50 p-6 rounded-xl border border-gray-600/50">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="bg-green-500/20 p-2 rounded-lg">
+                                <i class="fas fa-history text-green-400"></i>
+                            </div>
+                            <h4 class="text-xl font-semibold text-green-400">Recent Activity</h4>
+                        </div>
+                        <div id="recent-activity" class="space-y-3 max-h-80 overflow-y-auto">
+                            <!-- Recent activity will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-backdrop hidden">
+        <div class="modal-content relative">
+            <button id="settings-close-btn" class="absolute top-4 right-4 text-gray-200"><i
+                    class="fas fa-times fa-2x"></i></button>
+            <h3 class="text-2xl font-bold mb-2 text-center text-indigo-400">Settings</h3>
+            <p class="text-center text-gray-400 mb-6">Customize your focus environment.</p>
+
+            <!-- Tab Navigation -->
+            <div class="flex space-x-1 mb-6 bg-gray-700/30 p-1 rounded-lg">
+                <button
+                    class="settings-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition bg-indigo-600 text-white"
+                    data-tab="general">
+                    <i class="fas fa-cog mr-2"></i>General
+                </button>
+                <button
+                    class="settings-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition text-gray-300 hover:text-white hover:bg-gray-600"
+                    data-tab="theme">
+                    <i class="fas fa-palette mr-2"></i>Theme
+                </button>
+                <button
+                    class="settings-tab flex-1 py-2 px-4 rounded-md text-sm font-medium transition text-gray-300 hover:text-white hover:bg-gray-600"
+                    data-tab="timer">
+                    <i class="fas fa-clock mr-2"></i>Timer
+                </button>
+            </div>
+
+            <!-- Tab Content: General -->
+            <div id="general-tab" class="tab-content">
+                <div class="p-4 rounded-lg bg-gray-700/50 mb-6">
+                    <div class="flex justify-between items-center">
+                        <label for="pomodoro-toggle-checkbox" class="font-semibold text-lg">Pomodoro Flow</label>
+                        <div class="toggle-switch-wrapper">
+                            <label class="toggle-switch"><input type="checkbox" id="pomodoro-toggle-checkbox" /><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1">Automatically cycle between focus and break sessions.</p>
+                </div>
+            </div>
+
+            <!-- Tab Content: Theme -->
+            <div id="theme-tab" class="tab-content hidden">
+                <div class="p-4 rounded-lg bg-gray-700/50 mb-6">
+                    <h4 class="text-lg font-semibold mb-4">Color Theme</h4>
+                    <p class="text-sm text-gray-400 mb-4">Choose your preferred color theme</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="indigo">
+                            <div class="w-4 h-4 bg-indigo-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Indigo</span>
+                        </button>
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="teal">
+                            <div class="w-4 h-4 bg-teal-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Teal</span>
+                        </button>
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="rose">
+                            <div class="w-4 h-4 bg-rose-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Rose</span>
+                        </button>
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="orange">
+                            <div class="w-4 h-4 bg-orange-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Orange</span>
+                        </button>
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="emerald">
+                            <div class="w-4 h-4 bg-emerald-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Emerald</span>
+                        </button>
+                        <button
+                            class="theme-option p-3 rounded-lg border-2 border-transparent hover:border-gray-500 transition flex items-center space-x-2"
+                            data-theme="purple">
+                            <div class="w-4 h-4 bg-purple-500 rounded-full"></div>
+                            <span class="text-sm font-medium">Purple</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Timer -->
+            <div id="timer-tab" class="tab-content hidden">
+                <div class="space-y-4 mb-6">
+                    <h4 class="text-lg font-semibold border-b border-gray-700 pb-2 mb-4">Timer Durations</h4>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <label for="pomodoro-setting" class="font-medium text-gray-300">Pomodoro</label>
+                            <input type="number" id="pomodoro-setting"
+                                class="w-24 p-2 text-center rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <label for="shortBreak-setting" class="font-medium text-gray-300">Short Break</label>
+                            <input type="number" id="shortBreak-setting"
+                                class="w-24 p-2 text-center rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <label for="longBreak-setting" class="font-medium text-gray-300">Long Break</label>
+                            <input type="number" id="longBreak-setting"
+                                class="w-24 p-2 text-center rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <label for="session-goal-setting" class="font-medium text-gray-300">Sessions Goal</label>
+                            <input type="number" id="session-goal-setting"
+                                class="w-24 p-2 text-center rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <label for="custom-time-setting" class="font-medium text-gray-300">Custom Time</label>
+                            <input type="number" id="custom-time-setting"
+                                class="w-24 p-2 text-center rounded bg-gray-700 border border-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                    </div>
+                    <p class="text-xs text-center text-gray-400 pt-2">All durations are in minutes.</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <button id="save-settings-btn"
+                    class="px-6 py-3 w-full sm:w-40 bg-indigo-600 text-white rounded-lg font-bold shadow-lg hover:bg-indigo-700 transition">Save
+                    Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script type="module">
+        import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {getFirestore, doc, setDoc, onSnapshot} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- App State & Constants ---
+        let db, auth, userId, unsubscribe;
+        let localState = {}; // Single source of truth for local data mirror
+        window.localState = localState; // Make globally accessible
+        let timerInterval, timeRemaining, currentMode = 'pomodoro', isRunning = false;
+        let totalDuration;
+
+        const defaultSettings = {
+            pomodoro: 25, shortBreak: 5, longBreak: 15, sessionGoal: 5, pomodoroEnabled: true, customTime: 30,
+        };
+        const defaultProgress = {
+            sessionsCompleted: 0, lastSessionDate: getLocalDateString(),
+        };
+        const defaultTodos = [];
+
+        // --- DOM Elements ---
+        const timePart1El = document.getElementById('time-part1'), timePart2El = document.getElementById('time-part2');
+        const startStopBtn = document.getElementById('start-stop-btn'), resetBtn = document.getElementById('reset-btn');
+        const pomodoroBtn = document.getElementById('pomodoro-btn'), shortBreakBtn = document.getElementById('shortBreak-btn'), longBreakBtn = document.getElementById('longBreak-btn');
+        const taskListEl = document.getElementById('task-list'), newTaskInput = document.getElementById('new-task-input'), addTaskBtn = document.getElementById('add-task-btn');
+        const userIdDisplay = document.getElementById('userIdDisplay'), quoteTextEl = document.getElementById('quote-text'), quoteAuthorEl = document.getElementById('quote-author');
+        const ambientSoundToggle = document.getElementById('ambient-sound-toggle');
+        const mainModal = document.getElementById('main-modal'), modalTitle = document.getElementById('modal-title'), modalMessage = document.getElementById('modal-message'), modalCloseBtn = document.getElementById('modal-close-btn'), modalButtonsEl = document.getElementById('modal-buttons');
+        const settingsBtn = document.getElementById('settings-btn'), settingsModal = document.getElementById('settings-modal'), settingsCloseBtn = document.getElementById('settings-close-btn'), saveSettingsBtn = document.getElementById('save-settings-btn');
+        const pomodoroToggleCheckbox = document.getElementById('pomodoro-toggle-checkbox');
+        const taskProgressEl = document.getElementById('task-progress'), sessionTrackerEl = document.getElementById('session-tracker'), pomodoroControlsEl = document.getElementById('pomodoro-controls');
+        const pomodoroSettingInput = document.getElementById('pomodoro-setting'), shortBreakSettingInput = document.getElementById('shortBreak-setting'), longBreakSettingInput = document.getElementById('longBreak-setting'), sessionGoalSettingInput = document.getElementById('session-goal-setting'), customTimeSettingInput = document.getElementById('custom-time-setting');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        const progressRing = document.getElementById('progress-ring');
+        const radius = progressRing.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressRing.style.strokeDashoffset = circumference;
+
+        // --- Tone.js Sound Setup ---
+        const sounds = {
+            alarm: new Tone.Synth({oscillator: {type: "sine"}, envelope: {attack: 0.005, decay: 0.1, sustain: 0.3, release: 1}}).toDestination(),
+            rain: new Tone.Noise("white").connect(new Tone.Filter(800, "lowpass")).toDestination(),
+        };
+        sounds.rain.volume.value = -20;
+
+        // --- Firebase Initialization & App Start ---
+        function main() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+            if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    setupAuthListener(appId);
+                    initializeAuth();
+                } catch (e) {
+                    console.error("Firebase initialization failed:", e);
+                    showModal({title: "Connection Error", message: "Could not connect to the server. Running in local mode."});
+                    runInLocalMode();
+                }
+            } else {
+                runInLocalMode();
+            }
+        }
+
+        // --- Authentication & Data Sync ---
+        function setupAuthListener(appId) {
+            onAuthStateChanged(auth, user => {
+                if (unsubscribe) unsubscribe();
+                if (user) {
+                    userId = user.uid;
+                    userIdDisplay.textContent = userId;
+                    const docRef = doc(db, `artifacts/${appId}/users/${userId}/data/appData`);
+
+                    unsubscribe = onSnapshot(docRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            localState.settings = {...defaultSettings, ...data.settings};
+                            localState.progress = {...defaultProgress, ...data.progress};
+                            localState.todos = data.todos || [...defaultTodos];
+                            checkDateAndResetProgress();
+                        } else {
+                            Object.assign(localState, {settings: {...defaultSettings}, progress: {...defaultProgress}, todos: [...defaultTodos]});
+                            updateFirestore(localState);
+                        }
+                        renderAll();
+                    }, error => {
+                        console.error("Firestore snapshot error:", error);
+                        showModal({title: "Sync Error", message: "Failed to sync data. Please check your connection."});
+                    });
+                } else {
+                    userId = null;
+                    userIdDisplay.textContent = 'Not Logged In';
+                }
+            });
+        }
+
+        async function initializeAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                showModal({title: "Auth Error", message: "Could not sign in. Running in local mode."});
+                runInLocalMode();
+            }
+        }
+
+        function runInLocalMode() {
+            userId = `local_${crypto.randomUUID()}`;
+            userIdDisplay.textContent = "Local Mode";
+            Object.assign(localState, {settings: {...defaultSettings}, progress: {...defaultProgress}, todos: [...defaultTodos]});
+            renderAll();
+        }
+
+        function checkDateAndResetProgress() {
+            const today = getLocalDateString();
+            if (localState.progress.lastSessionDate !== today) {
+                localState.progress.sessionsCompleted = 0;
+                localState.progress.lastSessionDate = today;
+                updateFirestore({progress: localState.progress});
+            }
+        }
+
+        async function updateFirestore(data) {
+            if (!userId || userId.startsWith('local_') || !db) return Promise.resolve();
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/data/appData`);
+            try {
+                await setDoc(docRef, data, {merge: true});
+                return Promise.resolve();
+            } catch (error) {
+                console.error("Error updating Firestore:", error);
+                showModal({title: "Save Error", message: "Could not save your data to the cloud."});
+                return Promise.reject(error);
+            }
+        }
+
+        // --- UI Rendering ---
+        function renderAll() {
+            if (!localState.settings) {
+                console.warn("State not ready for rendering.");
+                return;
+            }
+            updatePomodoroModeUI();
+
+            // Use external renderTasks if available, otherwise use fallback
+            if (typeof window.renderTasks === 'function') {
+                window.renderTasks();
+            } else {
+                renderTaskProgress();
+            }
+
+            renderSessionTracker();
+            setMode(currentMode, true);
+            applyTheme(localState.settings.theme || 'indigo');
+        }
+
+        function updatePomodoroModeUI() {
+            const enabled = localState.settings.pomodoroEnabled;
+            pomodoroControlsEl.classList.toggle('hidden', !enabled);
+            sessionTrackerEl.classList.toggle('hidden', !enabled);
+        }
+
+        // --- To-Do List ---
+        // Task management functions are handled in script.js
+        function renderTaskProgress() {
+            const todos = localState.todos || [];
+            const completedCount = todos.filter(t => t.completed).length;
+            taskProgressEl.textContent = `${completedCount}/${todos.length} Completed`;
+        }
+
+        function addTask() {
+            const text = newTaskInput.value.trim();
+            const prioritySelect = document.getElementById('task-priority');
+            const priority = prioritySelect ? prioritySelect.value : 'low';
+
+            if (text) {
+                const newTodos = [...(localState.todos || []), {
+                    id: crypto.randomUUID(),
+                    text,
+                    completed: false,
+                    priority: priority,
+                    timeSpent: 0,
+                    createdAt: new Date().toISOString()
+                }];
+                newTaskInput.value = '';
+                if (prioritySelect) prioritySelect.value = 'low';
+                localState.todos = newTodos;
+
+                // Call external render function if available
+                if (typeof window.renderTasks === 'function') {
+                    window.renderTasks();
+                } else {
+                    renderTaskProgress();
+                }
+                updateFirestore({todos: newTodos});
+            }
+        }
+
+        function toggleTask(id) {
+            const newTodos = localState.todos.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+            localState.todos = newTodos;
+
+            // Call external render function if available
+            if (typeof window.renderTasks === 'function') {
+                window.renderTasks();
+            } else {
+                renderTaskProgress();
+            }
+            updateFirestore({todos: newTodos});
+        }
+
+        function deleteTask(id) {
+            showModal({
+                title: "Confirm Deletion",
+                message: "Are you sure you want to delete this task?",
+                buttons: [
+                    {
+                        text: 'Delete', class: 'bg-red-600 hover:bg-red-700 text-white', action: () => {
+                            const newTodos = localState.todos.filter(t => t.id !== id);
+                            localState.todos = newTodos;
+
+                            // Call external render function if available
+                            if (typeof window.renderTasks === 'function') {
+                                window.renderTasks();
+                            } else {
+                                renderTaskProgress();
+                            }
+                            updateFirestore({todos: newTodos});
+                        }
+                    },
+                    {text: 'Cancel', class: 'bg-gray-600 hover:bg-gray-500'}
+                ]
+            });
+        }
+
+        // --- Timer Logic ---
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        function updateDisplay() {
+            const totalMins = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const hours = Math.floor(totalMins / 60);
+            const mins = totalMins % 60;
+
+            if (totalMins >= 60) {
+                // Show hours:minutes format when 1 hour or more
+                timePart1El.textContent = String(hours).padStart(2, '0');
+                timePart2El.textContent = String(mins).padStart(2, '0');
+                document.title = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')} - Focus Hub`;
+            } else {
+                // Show minutes:seconds format when less than 1 hour
+                timePart1El.textContent = String(totalMins).padStart(2, '0');
+                timePart2El.textContent = String(seconds).padStart(2, '0');
+                document.title = `${String(totalMins).padStart(2, '0')}:${String(seconds).padStart(2, '0')} - Focus Hub`;
+            }
+
+            const percent = ((totalDuration - timeRemaining) / totalDuration) * 100;
+            setProgress(percent > 100 ? 100 : percent);
+        }
+
+        function setMode(mode, isInitialization = false) {
+            clearInterval(timerInterval);
+            isRunning = false;
+            currentMode = mode;
+            const settings = localState.settings || defaultSettings;
+
+            // Use custom time if pomodoro flow is disabled and not in initialization
+            if (!settings.pomodoroEnabled && !isInitialization && mode === 'pomodoro') {
+                totalDuration = (settings.customTime || defaultSettings.customTime) * 60;
+            } else {
+                totalDuration = (settings[mode] || defaultSettings[mode]) * 60;
+            }
+
+            timeRemaining = totalDuration;
+
+            updateDisplay();
+            startStopBtn.textContent = 'START';
+
+            [pomodoroBtn, shortBreakBtn, longBreakBtn].forEach(btn => {
+                btn.classList.remove('bg-indigo-500', 'text-white');
+                btn.classList.add('bg-gray-700');
+            });
+
+            if (document.getElementById(`${mode}-btn`)) {
+                document.getElementById(`${mode}-btn`).classList.add('bg-indigo-500', 'text-white');
+            }
+        }
+
+        function renderSessionTracker() {
+            const progress = localState.progress || defaultProgress;
+            const settings = localState.settings || defaultSettings;
+            sessionTrackerEl.textContent = `Sessions: ${progress.sessionsCompleted} / ${settings.sessionGoal}`;
+        }
+
+        function startStopTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                startStopBtn.textContent = 'START';
+            } else {
+                startStopBtn.textContent = 'PAUSE';
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                timerInterval = setInterval(() => {
+                    timeRemaining--;
+                    updateDisplay();
+
+                    // Update task session time if there's an active task
+                    if (typeof window.updateTaskSessionTime === 'function') {
+                        window.updateTaskSessionTime();
+                    }
+
+                    if (timeRemaining < 0) {
+                        clearInterval(timerInterval);
+                        isRunning = false;
+                        startStopBtn.textContent = 'START';
+                        sounds.alarm.triggerAttackRelease("C4", "0.5");
+
+                        // Clear active task when session completes
+                        if (typeof window.clearActiveTask === 'function') {
+                            window.clearActiveTask();
+                        }
+
+                        if (localState.settings.pomodoroEnabled) {
+                            handlePomodoroCompletion();
+                        } else {
+                            setMode(currentMode);
+                            showModal({title: "Time's Up!", message: "Your session has finished."});
+                        }
+                    }
+                }, 1000);
+            }
+            isRunning = !isRunning;
+        }
+
+        function handlePomodoroCompletion() {
+            let nextMode = 'pomodoro';
+            let alertMessage = "";
+
+            if (currentMode === 'pomodoro') {
+                const newProgress = {...localState.progress, sessionsCompleted: localState.progress.sessionsCompleted + 1};
+                nextMode = (newProgress.sessionsCompleted > 0 && newProgress.sessionsCompleted % localState.settings.sessionGoal === 0) ? 'longBreak' : 'shortBreak';
+                alertMessage = `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`;
+
+                localState.progress = newProgress;
+                renderSessionTracker();
+                updateFirestore({progress: newProgress});
+            } else {
+                nextMode = 'pomodoro';
+                alertMessage = "Break's over! Time to get back to focus.";
+            }
+
+            setMode(nextMode);
+            showModal({title: "Session Complete!", message: alertMessage});
+        }
+
+        // --- Settings Logic ---
+        function openSettingsModal() {
+            const settings = localState.settings || defaultSettings;
+            pomodoroSettingInput.value = settings.pomodoro;
+            shortBreakSettingInput.value = settings.shortBreak;
+            longBreakSettingInput.value = settings.longBreak;
+            sessionGoalSettingInput.value = settings.sessionGoal;
+            customTimeSettingInput.value = settings.customTime;
+            pomodoroToggleCheckbox.checked = settings.pomodoroEnabled;
+
+            // Apply current theme
+            applyTheme(settings.theme || 'indigo');
+
+            settingsModal.classList.remove('hidden');
+        }
+
+        async function saveSettings() {
+            saveSettingsBtn.disabled = true;
+            saveSettingsBtn.textContent = 'Saving...';
+
+            const selectedTheme = document.querySelector('.theme-option.selected')?.dataset.theme || 'indigo';
+            const newSettings = {
+                ...localState.settings,
+                pomodoro: parseInt(pomodoroSettingInput.value) || defaultSettings.pomodoro,
+                shortBreak: parseInt(shortBreakSettingInput.value) || defaultSettings.shortBreak,
+                longBreak: parseInt(longBreakSettingInput.value) || defaultSettings.longBreak,
+                sessionGoal: parseInt(sessionGoalSettingInput.value) || defaultSettings.sessionGoal,
+                customTime: parseInt(customTimeSettingInput.value) || defaultSettings.customTime,
+                pomodoroEnabled: pomodoroToggleCheckbox.checked,
+                theme: selectedTheme,
+            };
+            localState.settings = newSettings;
+            renderSessionTracker();
+            updatePomodoroModeUI();
+            setMode(currentMode);
+
+            await updateFirestore({settings: newSettings});
+
+            saveSettingsBtn.textContent = 'Saved!';
+            setTimeout(() => {
+                settingsModal.classList.add('hidden');
+                saveSettingsBtn.textContent = 'Save Changes';
+                saveSettingsBtn.disabled = false;
+            }, 1000);
+        }
+
+        // --- Modal Logic ---
+        function showModal({title, message, buttons = []}) {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message;
+            modalButtonsEl.innerHTML = '';
+
+            if (buttons.length === 0) {
+                buttons.push({text: 'OK', class: 'bg-indigo-600 hover:bg-indigo-700 text-white'});
+            }
+
+            buttons.forEach(btnInfo => {
+                const button = document.createElement('button');
+                button.textContent = btnInfo.text;
+                button.className = `px-4 py-2 rounded-lg font-semibold transition ${btnInfo.class || ''}`;
+                button.onclick = () => {
+                    if (btnInfo.action) btnInfo.action();
+                    mainModal.classList.add('hidden');
+                };
+                modalButtonsEl.appendChild(button);
+            });
+            mainModal.classList.remove('hidden');
+        }
+
+        // --- Fullscreen Logic ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function updateFullscreenIcon() {
+            const icon = fullscreenBtn.querySelector('i');
+            if (document.fullscreenElement) {
+                icon.classList.remove('fa-expand');
+                icon.classList.add('fa-compress');
+            } else {
+                icon.classList.remove('fa-compress');
+                icon.classList.add('fa-expand');
+            }
+        }
+
+
+
+        // --- Theme Management ---
+        function applyTheme(themeName) {
+            document.documentElement.className = document.documentElement.className.replace(/theme-\w+/g, '');
+            document.documentElement.classList.add(`theme-${themeName}`);
+
+            // Update theme option selection
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('selected');
+                if (option.dataset.theme === themeName) {
+                    option.classList.add('selected');
+                }
+            });
+        }
+
+        function setupThemeEventListeners() {
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const theme = option.dataset.theme;
+                    applyTheme(theme);
+                });
+            });
+        }
+
+        // Make functions globally accessible
+        window.showModal = showModal;
+        window.updateFirestore = updateFirestore;
+
+
+
+        // --- Event Listeners ---
+        function setupEventListeners() {
+            addTaskBtn.addEventListener('click', addTask);
+            newTaskInput.addEventListener('keypress', e => e.key === 'Enter' && addTask());
+            startStopBtn.addEventListener('click', startStopTimer);
+            resetBtn.addEventListener('click', () => setMode(currentMode));
+            pomodoroBtn.addEventListener('click', () => setMode('pomodoro'));
+            shortBreakBtn.addEventListener('click', () => setMode('shortBreak'));
+            longBreakBtn.addEventListener('click', () => setMode('longBreak'));
+            settingsBtn.addEventListener('click', openSettingsModal);
+            settingsCloseBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            modalCloseBtn.addEventListener('click', () => mainModal.classList.add('hidden'));
+            fullscreenBtn.addEventListener('click', toggleFullScreen);
+            document.addEventListener('fullscreenchange', updateFullscreenIcon);
+
+            setupThemeEventListeners();
+
+            ambientSoundToggle.addEventListener('change', (e) => {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                if (e.target.checked) {
+                    sounds.rain.start();
+                } else {
+                    sounds.rain.stop();
+                }
+            });
+        }
+
+        // --- Utilities ---
+        function getLocalDateString() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        function escapeHTML(str) {
+            const p = document.createElement('p');
+            p.appendChild(document.createTextNode(str));
+            return p.innerHTML;
+        }
+
+        // --- App Entry Point ---
+        main();
+        setupEventListeners();
+
+    </script>
+</body>
+
+</html>
